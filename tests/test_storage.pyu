@@ -1,0 +1,132 @@
+// tests/test_storage.pyu
+// Testes de gravação e leitura do formato .avx-stream
+// Roda com: python pyrus.py run tests/test_storage.pyu
+
+print("═══ Testes Storage .avx-stream ═══");
+
+let passou = 0;
+let falhou = 0;
+
+func assert_eq(nome, esperado, obtido) {
+    if esperado == obtido {
+        print("  ✅ " + nome);
+        passou = passou + 1;
+    } else {
+        print("  ❌ " + nome +
+              " | esperado=" + str(esperado) +
+              " | obtido=" + str(obtido));
+        falhou = falhou + 1;
+    }
+}
+
+func assert_near(nome, esperado, obtido, tol) {
+    let diff = esperado - obtido;
+    if diff < 0.0 { diff = -diff; }
+    if diff <= tol {
+        print("  ✅ " + nome);
+        passou = passou + 1;
+    } else {
+        print("  ❌ " + nome + " diff=" + str(round(diff, 8)));
+        falhou = falhou + 1;
+    }
+}
+
+// ── Preparação ────────────────────────────────────────
+
+let arquivo_teste = "logs/teste_unitario.avx-stream";
+
+// Remove arquivo de teste anterior se existir
+let h_limpar = storage_open(arquivo_teste);
+storage_close(h_limpar);
+
+// ── Teste 1: Gravar e contar registros ────────────────
+
+let h = storage_open(arquivo_teste);
+
+let p1 = {
+    "tipo":             "TELEMETRY",
+    "timestamp":        1748000000000000,
+    "lat":              -9.6658,
+    "lon":              -35.7350,
+    "alt":              25.4,
+    "speed":            8.5,
+    "pitch":            0.02,
+    "roll":             -0.03,
+    "yaw":              1.57,
+    "battery_voltage":  4.1,
+    "signal_quality":   0.95,
+};
+
+let p2 = {
+    "tipo":             "TELEMETRY",
+    "timestamp":        1748000000050000,
+    "lat":              -9.6659,
+    "lon":              -35.7351,
+    "alt":              25.8,
+    "speed":            9.1,
+    "pitch":            0.01,
+    "roll":             -0.02,
+    "yaw":              1.60,
+    "battery_voltage":  4.09,
+    "signal_quality":   0.94,
+};
+
+storage_write(h, p1);
+storage_write(h, p2);
+storage_close(h);
+
+let total = storage_record_count(arquivo_teste);
+assert_eq("Total de registros após 2 gravações", 2, total);
+
+// ── Teste 2: Busca O(1) por índice ────────────────────
+
+let r0 = storage_read_at(arquivo_teste, 0);
+let r1 = storage_read_at(arquivo_teste, 1);
+
+assert_near("Registro 0 — lat",  -9.6658,  r0["lat"],  0.00001);
+assert_near("Registro 0 — lon",  -35.7350, r0["lon"],  0.00001);
+assert_near("Registro 0 — alt",  25.4,     r0["alt"],  0.01);
+assert_near("Registro 0 — speed", 8.5,     r0["speed"], 0.01);
+
+assert_near("Registro 1 — lat",  -9.6659,  r1["lat"],  0.00001);
+assert_near("Registro 1 — alt",  25.8,     r1["alt"],  0.01);
+
+// ── Teste 3: Índice fora do range retorna null ─────────
+
+let r_invalido = storage_read_at(arquivo_teste, 99);
+assert_eq("Índice fora do range retorna null", null, r_invalido);
+
+// ── Teste 4: Timestamp preservado ─────────────────────
+
+assert_eq("Timestamp do registro 0",
+          1748000000000000,
+          r0["timestamp"]);
+
+// ── Teste 5: Append funciona corretamente ─────────────
+
+let h2 = storage_open(arquivo_teste);
+let p3 = {
+    "tipo": "TELEMETRY", "timestamp": 1748000000100000,
+    "lat": -9.6660, "lon": -35.7352, "alt": 26.2,
+    "speed": 9.5, "pitch": 0.0, "roll": 0.0, "yaw": 1.65,
+    "battery_voltage": 4.08, "signal_quality": 0.93,
+};
+storage_write(h2, p3);
+storage_close(h2);
+
+let total_depois = storage_record_count(arquivo_teste);
+assert_eq("Total após append", 3, total_depois);
+
+let r2 = storage_read_at(arquivo_teste, 2);
+assert_near("Registro 2 — lat", -9.6660, r2["lat"], 0.00001);
+
+// ── Resultado ──────────────────────────────────────────
+
+print("");
+print("─────────────────────────────────────");
+print("Passou: " + str(passou) + " | Falhou: " + str(falhou));
+if falhou == 0 {
+    print("✅ Todos os testes passaram.");
+} else {
+    print("❌ " + str(falhou) + " teste(s) falharam.");
+}

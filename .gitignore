@@ -1,0 +1,7 @@
+*.pyc
+__pycache__/
+logs/*.avx-stream
+logs/*.log
+*.backup
+*.tmp
+.DS_Store

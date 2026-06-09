@@ -1,0 +1,76 @@
+// ═══════════════════════════════════════════════════════
+// core/plugin_loader.pyu
+// Carregador dinâmico de plugins .pyu
+//
+// Varre a pasta plugins/, carrega cada arquivo que
+// implementar a interface obrigatória e registra
+// on_telemetry_packet no event bus automaticamente.
+//
+// Interface obrigatória de todo plugin:
+//   func on_plugin_load()
+//   func on_telemetry_packet(pacote)
+//   func on_plugin_unload()
+// ═══════════════════════════════════════════════════════
+
+import "event_bus.pyu";
+
+let _plugins_carregados = [];
+let _total_carregados   = 0;
+
+func carregar_todos() {
+    let lista = listar_plugins();
+
+    if len(lista) == 0 {
+        print("[Plugins] Nenhum plugin encontrado em plugins/");
+        return;
+    }
+
+    print("[Plugins] Encontrados: " + str(len(lista)) + " arquivo(s)");
+
+    for caminho in lista {
+        _tentar_carregar(caminho);
+    }
+
+    print("[Plugins] Carregados com sucesso: " + str(_total_carregados));
+}
+
+func _tentar_carregar(caminho) {
+    print("[Plugins] Carregando: " + caminho);
+
+    import caminho;
+
+    // Verifica interface mínima
+    // (has_func é um builtin que verifica o ambiente)
+    let tem_load   = has_func("on_plugin_load");
+    let tem_packet = has_func("on_telemetry_packet");
+    let tem_unload = has_func("on_plugin_unload");
+
+    if not tem_load or not tem_packet or not tem_unload {
+        print("[Plugins] ❌ Interface inválida em: " + caminho);
+        print("[Plugins]    Necessário: on_plugin_load, on_telemetry_packet, on_plugin_unload");
+        return;
+    }
+
+    // Inicializa e registra
+    on_plugin_load();
+    registrar_seguro(on_telemetry_packet);
+    _plugins_carregados.push(caminho);
+    _total_carregados = _total_carregados + 1;
+    print("[Plugins] ✅ " + caminho);
+}
+
+func descarregar_todos() {
+    print("[Plugins] Descarregando " + str(len(_plugins_carregados)) + " plugin(s)...");
+    // on_plugin_unload de cada plugin já foi registrado pelo import
+    // chamamos diretamente se ainda estiver no escopo
+    _total_carregados = 0;
+    _plugins_carregados = [];
+}
+
+func total() {
+    return _total_carregados;
+}
+
+func lista() {
+    return _plugins_carregados;
+}

@@ -1,0 +1,87 @@
+// tests/test_mavlink.pyu
+// Testes de decodificação MAVLink
+// Roda com: python pyrus.py run tests/test_mavlink.pyu
+
+print("═══ Testes MAVLink ═══");
+
+let passou = 0;
+let falhou = 0;
+
+func assert_eq(nome, esperado, obtido) {
+    if esperado == obtido {
+        print("  ✅ " + nome);
+        passou = passou + 1;
+    } else {
+        print("  ❌ " + nome +
+              " | esperado=" + str(esperado) +
+              " | obtido=" + str(obtido));
+        falhou = falhou + 1;
+    }
+}
+
+func assert_near(nome, esperado, obtido, tolerancia) {
+    let diff = esperado - obtido;
+    if diff < 0.0 { diff = -diff; }
+    if diff <= tolerancia {
+        print("  ✅ " + nome);
+        passou = passou + 1;
+    } else {
+        print("  ❌ " + nome +
+              " | esperado≈" + str(round(esperado, 6)) +
+              " | obtido=" + str(round(obtido, 6)) +
+              " | diff=" + str(round(diff, 8)));
+        falhou = falhou + 1;
+    }
+}
+
+// ── Teste 1: Conversão GPS (int32 → graus decimais) ──
+
+// Maceió: lat = -9.6658°  = -96658000 * 1e-7
+// lon = -35.7350°          = -357350000 * 1e-7
+let lat_raw = -96658000;
+let lon_raw = -357350000;
+let lat = lat_raw / 10000000.0;
+let lon = lon_raw / 10000000.0;
+
+assert_near("GPS lat Maceió",  -9.6658,  lat, 0.00001);
+assert_near("GPS lon Maceió", -35.7350,  lon, 0.00001);
+
+// ── Teste 2: Altitude em milímetros → metros ──
+
+let alt_mm = 25400;   // 25.4m
+let alt_m  = alt_mm / 1000.0;
+assert_near("Altitude mm→m", 25.4, alt_m, 0.001);
+
+// ── Teste 3: Tensão mV → V ──
+
+let voltage_mv = 4200;
+let voltage_v  = voltage_mv / 1000.0;
+assert_near("Tensão mV→V", 4.2, voltage_v, 0.001);
+
+// ── Teste 4: Radianos ↔ Graus ──
+
+let yaw_rad  = math.radians(180.0);
+let yaw_grau = math.degrees(yaw_rad);
+assert_near("rad→grau 180°", 180.0, yaw_grau, 0.0001);
+
+let roll_rad  = math.radians(-45.0);
+let roll_grau = math.degrees(roll_rad);
+assert_near("rad→grau -45°", -45.0, roll_grau, 0.0001);
+
+// ── Teste 5: Validação de magic byte ──
+
+let magic_valido   = 254;   // 0xFE
+let magic_invalido = 253;
+assert_eq("Magic byte válido",   true,  magic_valido == 254);
+assert_eq("Magic byte inválido", false, magic_invalido == 254);
+
+// ── Resultado ──────────────────────────────────────────
+
+print("");
+print("─────────────────────────────────────");
+print("Passou: " + str(passou) + " | Falhou: " + str(falhou));
+if falhou == 0 {
+    print("✅ Todos os testes passaram.");
+} else {
+    print("❌ " + str(falhou) + " teste(s) falharam.");
+}

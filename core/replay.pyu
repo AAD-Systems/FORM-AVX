@@ -1,0 +1,131 @@
+// ═══════════════════════════════════════════════════════
+// core/replay.pyu
+// Reprodutor de voo a partir de arquivo .avx-stream
+//
+// Do ponto de vista da UI: idêntico ao voo ao vivo.
+// Os dados entram no mesmo event bus do MAVLink real.
+// Velocidade 1x, 2x, 4x controlada pelo usuário.
+// ═══════════════════════════════════════════════════════
+
+import "event_bus.pyu";
+
+let _rodando      = false;
+let _pausado      = false;
+let _velocidade   = 1.0;
+let _posicao      = 0;
+let _total        = 0;
+let _caminho_ativo = "";
+
+// ── Iniciar replay ────────────────────────────────────
+
+func iniciar_replay(caminho, velocidade) {
+    let total = storage_record_count(caminho);
+
+    if total == 0 {
+        print("[Replay] Arquivo vazio ou não encontrado: " + caminho);
+        return;
+    }
+
+    _caminho_ativo = caminho;
+    _velocidade    = velocidade;
+    _total         = total;
+    _posicao       = 0;
+    _rodando       = true;
+    _pausado       = false;
+
+    print("[Replay] Iniciando: " + caminho);
+    print("[Replay] Total de registros: " + str(total));
+    print("[Replay] Velocidade: " + str(velocidade) + "x");
+
+    _loop_replay();
+}
+
+func _loop_replay() {
+    while _rodando and _posicao < _total {
+        if _pausado {
+            sleep(0.05);
+            continue;
+        }
+
+        let pacote = storage_read_at(_caminho_ativo, _posicao);
+
+        if pacote == null {
+            print("[Replay] Erro ao ler registro " + str(_posicao));
+            _posicao = _posicao + 1;
+            continue;
+        }
+
+        publicar(pacote);
+
+        // Calcula o delta de tempo até o próximo registro
+        if _posicao + 1 < _total {
+            let proximo = storage_read_at(_caminho_ativo, _posicao + 1);
+            if proximo != null {
+                let delta_us = proximo["timestamp"] - pacote["timestamp"];
+                if delta_us > 0 {
+                    let delta_s = (delta_us / 1000000.0) / _velocidade;
+                    // Limita delta para no máximo 1s (evita travar em gaps)
+                    if delta_s > 1.0 { delta_s = 1.0; }
+                    sleep(delta_s);
+                }
+            }
+        }
+
+        _posicao = _posicao + 1;
+
+        // Progresso a cada 10%
+        if _posicao % int(_total / 10 + 1) == 0 {
+            let pct = int((_posicao / _total) * 100.0);
+            print("[Replay] Progresso: " + str(pct) + "%");
+        }
+    }
+
+    if _rodando {
+        _rodando = false;
+        publicar({"tipo": "REPLAY_END", "total": _total});
+        print("[Replay] Concluído. " + str(_total) + " registros reproduzidos.");
+    }
+}
+
+// ── Controles ─────────────────────────────────────────
+
+func pausar() {
+    _pausado = true;
+    print("[Replay] Pausado em " + str(_posicao) + "/" + str(_total));
+}
+
+func retomar() {
+    _pausado = false;
+    print("[Replay] Retomado.");
+}
+
+func parar() {
+    _rodando = false;
+    print("[Replay] Parado pelo usuário.");
+}
+
+func set_velocidade(v) {
+    _velocidade = v;
+    print("[Replay] Velocidade: " + str(v) + "x");
+}
+
+func pular_para(indice) {
+    if indice >= 0 and indice < _total {
+        _posicao = indice;
+    }
+}
+
+// ── Consultas ─────────────────────────────────────────
+
+func progresso() {
+    if _total == 0 { return 0.0; }
+    return _posicao / _total;
+}
+
+func esta_rodando() {
+    return _rodando;
+}
+
+func posicao_atual() {
+    return _posicao;
+}

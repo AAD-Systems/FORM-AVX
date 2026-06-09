@@ -1,0 +1,67 @@
+// core/main.pyu — FORM AVX Core Engine v0.1.0
+
+import "core/event_bus.pyu";
+import "core/storage.pyu";
+
+print("╔══════════════════════════════════════════╗");
+print("║   FORM AVX — Core Engine  v0.1.0         ║");
+print("║   Pyrus v0.2.0  🍐  Alagoas, Brasil 🇧🇷   ║");
+print("╚══════════════════════════════════════════╝");
+print("");
+
+print("[Core] Modo: " + MODO_OP);
+
+// ── Registra ui_push no barramento (se UI conectada)
+if UI_CONNECTED {
+    registrar(ui_push);
+    print("[Core] UI conectada ao barramento.");
+}
+
+// ── Inicia gravação
+iniciar();    // storage.pyu expõe iniciar() global
+
+// ── Monitor de saúde
+spawn monitorar_saude();
+
+// ── Carrega plugins (via builtin que faz import dinâmico)
+let plugins = listar_plugins();
+print("[Core] Plugins encontrados: " + str(len(plugins)));
+
+// ── Despacha para o bridge correto
+if MODO_OP == "sim" {
+    import "telemetry/simulator.pyu";
+    print("[Core] Simulador iniciado (Maceió 🍐)");
+    spawn iniciar_sim();
+}
+
+if MODO_OP == "live" {
+    import "telemetry/mavlink_bridge.pyu";
+    print("[Core] Aguardando MAVLink UDP:14550...");
+    spawn iniciar_udp(14550);
+}
+
+if MODO_OP == "serial" {
+    import "telemetry/mavlink_bridge.pyu";
+    print("[Core] Serial: " + SERIAL_PORT);
+    spawn iniciar_serial(SERIAL_PORT, 57600);
+}
+
+if MODO_OP == "replay" {
+    import "core/replay.pyu";
+    print("[Core] Replay: " + REPLAY_FILE);
+    spawn iniciar_replay(REPLAY_FILE, 1.0);
+}
+
+print("[Core] Sistema operacional. Ctrl+C para encerrar.");
+print("");
+
+// ── Heartbeat a cada 10s
+let ciclos = 0;
+while true {
+    sleep(10.0);
+    ciclos = ciclos + 1;
+    let ev  = total();
+    let gr  = total_gravados();
+    let st  = status();
+    print("[Core] " + st + " | Eventos: " + str(ev) + " | Gravados: " + str(gr));
+}

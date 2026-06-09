@@ -1,0 +1,143 @@
+// telemetry/simulator.pyu — GRAVAÇÃO DIRETA
+
+import "../core/event_bus.pyu";
+
+let LAT_BASE = -9.6658;
+let LON_BASE = -35.7350;
+let RAIO_KM  = 0.05;
+let ALT_BASE = 50.0;
+
+let _rodando    = false;
+let _angulo     = 0.0;
+let _bateria    = 100.0;
+let _sinal      = 0.98;
+let _altitude   = 0.0;
+let _fase       = "DECOLANDO";
+let _handle     = null;
+
+func iniciar_sim() {
+    _rodando  = true;
+    _angulo   = 0.0;
+    _bateria  = 100.0;
+    _altitude = 0.0;
+    _fase     = "DECOLANDO";
+    
+    // Abrir arquivo de log DIRETAMENTE
+    _handle = storage_open("logs/sim_direct.avx-stream");
+    print("[Sim] Arquivo de log aberto. Handle: " + str(_handle));
+
+    print("[Sim] Simulador iniciado. Base: Maceió, AL 🍐");
+    print("[Sim] Padrão: círculo de " + str(int(RAIO_KM * 1000)) + "m de raio");
+
+    _loop();
+}
+
+func _loop() {
+    let contador = 0;
+    while _rodando {
+        let ts = timestamp_us();
+
+        if _fase == "DECOLANDO" {
+            _altitude = _altitude + 0.5;
+            if _altitude >= ALT_BASE {
+                _altitude = ALT_BASE;
+                _fase     = "VOANDO";
+                print("[Sim] Altitude de cruzeiro atingida: " + str(ALT_BASE) + "m");
+            }
+        }
+
+        if _fase == "VOANDO" {
+            _angulo = _angulo + 1.0;
+            if _angulo >= 360.0 {
+                _angulo = 0.0;
+            }
+
+            _bateria = _bateria - 0.001;
+            if _bateria < 15.0 {
+                _fase = "POUSANDO";
+                print("[Sim] ⚠️ Bateria baixa! Iniciando pouso automático.");
+            }
+
+            _sinal = 0.85 + math.sin(math.radians(_angulo * 3)) * 0.10;
+            if _sinal > 1.0 { _sinal = 1.0; }
+            if _sinal < 0.0 { _sinal = 0.0; }
+        }
+
+        if _fase == "POUSANDO" {
+            _altitude = _altitude - 0.3;
+            if _altitude <= 0.0 {
+                _altitude = 0.0;
+                _fase     = "NO_CHAO";
+                print("[Sim] Drone pousado.");
+            }
+        }
+
+        let ang_rad = math.radians(_angulo);
+        let lat_off = (RAIO_KM / 111.32) * math.cos(ang_rad);
+        let lon_off = (RAIO_KM / (111.32 * math.cos(math.radians(LAT_BASE)))) * math.sin(ang_rad);
+
+        let lat = LAT_BASE + lat_off;
+        let lon = LON_BASE + lon_off;
+
+        let pitch = math.sin(math.radians(_angulo * 2)) * 0.05;
+        let roll  = math.cos(math.radians(_angulo * 2)) * 0.08;
+        let yaw   = math.radians(_angulo);
+        let speed = 8.5 + math.sin(math.radians(_angulo)) * 1.5;
+        let voltage = 3.3 + (_bateria / 100.0) * 0.9;
+
+        let pacote = {
+            "tipo":             "TELEMETRY",
+            "timestamp":        ts,
+            "lat":              lat,
+            "lon":              lon,
+            "alt":              _altitude,
+            "speed":            speed,
+            "pitch":            pitch,
+            "roll":             roll,
+            "yaw":              yaw,
+            "battery_voltage":  round(voltage, 3),
+            "signal_quality":   round(_sinal, 3),
+            "modo_voo":         _fase,
+            "armed":            _fase != "NO_CHAO",
+            "climb":            0.0,
+            "bateria_pct":      round(_bateria, 1),
+        };
+
+        // Publicar no event bus
+        publicar(pacote);
+        
+        // GRAVAR DIRETAMENTE
+        if _handle != null {
+            let ok = storage_write(_handle, pacote);
+            contador = contador + 1;
+            if ok and contador % 10 == 0 {
+                print("[Sim] Gravados " + str(contador) + " registros");
+            }
+        }
+        
+        sleep(0.05);
+
+        if _fase == "NO_CHAO" {
+            sleep(2.0);
+            _rodando = false;
+            if _handle != null {
+                storage_close(_handle);
+                print("[Sim] Log fechado. Total gravado: " + str(contador));
+            }
+            publicar({"tipo": "SYSTEM_WARNING", "codigo": "SIM_ENDED"});
+            print("[Sim] Simulação encerrada.");
+        }
+    }
+}
+
+func parar() {
+    _rodando = false;
+}
+
+func resetar() {
+    _angulo   = 0.0;
+    _bateria  = 100.0;
+    _altitude = 0.0;
+    _fase     = "DECOLANDO";
+    print("[Sim] Resetado.");
+}

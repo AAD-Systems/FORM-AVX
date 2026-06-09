@@ -1,0 +1,140 @@
+// ═══════════════════════════════════════════════════════
+// core/mission.pyu
+// Planejador e uploader de missões MAVLink
+//
+// Recebe lista de waypoints da UI,
+// converte em comandos MAVLink e envia ao drone.
+// ═══════════════════════════════════════════════════════
+
+import "event_bus.pyu";
+
+let _waypoints    = [];
+let _modo         = "IDLE";   // IDLE | UPLOAD | EXECUTANDO | ABORTADO
+let _wp_atual     = 0;
+
+// ── Definição de waypoint ─────────────────────────────
+// Cada waypoint é um dicionário:
+// {
+//   "lat":    float,   // graus decimais
+//   "lon":    float,   // graus decimais
+//   "alt":    float,   // metros acima do ponto de decolagem
+//   "veloc":  float,   // velocidade de aproximação em m/s (0 = padrão do FC)
+//   "espera": float,   // segundos de espera após chegar (0 = passa direto)
+// }
+
+func definir_waypoints(lista) {
+    _waypoints = lista;
+    _modo      = "PRONTO";
+    print("[Mission] " + str(len(lista)) + " waypoints definidos.");
+}
+
+func adicionar_waypoint(lat, lon, alt) {
+    _waypoints.push({
+        "lat":    lat,
+        "lon":    lon,
+        "alt":    alt,
+        "veloc":  0.0,
+        "espera": 0.0,
+    });
+    print("[Mission] Waypoint adicionado: " +
+          str(round(lat, 6)) + ", " +
+          str(round(lon, 6)) + " @ " + str(alt) + "m");
+}
+
+func limpar() {
+    _waypoints = [];
+    _modo      = "IDLE";
+    print("[Mission] Missão limpa.");
+}
+
+// ── Validação ─────────────────────────────────────────
+
+func validar() {
+    if len(_waypoints) == 0 {
+        print("[Mission] Erro: sem waypoints.");
+        return false;
+    }
+    let i = 0;
+    while i < len(_waypoints) {
+        let wp = _waypoints[i];
+        if not wp.has("lat") or not wp.has("lon") or not wp.has("alt") {
+            print("[Mission] Waypoint " + str(i) + " incompleto.");
+            return false;
+        }
+        if wp["alt"] < 0.0 or wp["alt"] > 500.0 {
+            print("[Mission] Waypoint " + str(i) + ": altitude fora do range (0-500m).");
+            return false;
+        }
+        i = i + 1;
+    }
+    print("[Mission] Validação OK. " + str(len(_waypoints)) + " waypoints prontos.");
+    return true;
+}
+
+// ── Upload simulado (protocolo MAVLink v2 simplificado) ──
+
+func fazer_upload() {
+    if not validar() { return false; }
+
+    _modo = "UPLOAD";
+    let total = len(_waypoints);
+
+    print("[Mission] Iniciando upload de " + str(total) + " waypoints...");
+
+    // Em hardware real, aqui vai:
+    // udp.send(drone_ip, 14550, mavlink_mission_count(total));
+    // E o loop aguarda MISSION_REQUEST para cada item.
+    // Por agora, simulamos o protocolo:
+
+    publicar({"tipo": "MISSION_START", "total": total});
+
+    let i = 0;
+    while i < total {
+        let wp = _waypoints[i];
+
+        // Simula o envio do item e a confirmação
+        print("[Mission] Enviando WP " + str(i + 1) + "/" + str(total) +
+              " → lat:" + str(round(wp["lat"], 5)) +
+              " lon:" + str(round(wp["lon"], 5)) +
+              " alt:" + str(wp["alt"]) + "m");
+
+        sleep(0.05);  // latência de rede simulada
+
+        publicar({
+            "tipo":    "MISSION_ITEM_SENT",
+            "indice":  i,
+            "lat":     wp["lat"],
+            "lon":     wp["lon"],
+            "alt":     wp["alt"],
+        });
+
+        i = i + 1;
+    }
+
+    _modo = "EXECUTANDO";
+    publicar({"tipo": "MISSION_UPLOADED", "total": total});
+    print("[Mission] Upload concluído. Missão ativa.");
+    return true;
+}
+
+// ── Abortar missão ────────────────────────────────────
+
+func abortar() {
+    _modo = "ABORTADO";
+    publicar({"tipo": "MISSION_ABORT"});
+    print("[Mission] ⚠️  MISSÃO ABORTADA.");
+}
+
+// ── Consultas ─────────────────────────────────────────
+
+func modo() {
+    return _modo;
+}
+
+func total_waypoints() {
+    return len(_waypoints);
+}
+
+func get_waypoints() {
+    return _waypoints;
+}

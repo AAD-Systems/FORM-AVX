@@ -1,0 +1,47 @@
+// plugins/test_storage.pyu
+// Testa se storage_write está funcionando
+
+let handle = null;
+
+func on_plugin_load() {
+    print("[StorageTest] Plugin carregado");
+    
+    // Abrir arquivo de log
+    handle = storage_open("logs/test_from_plugin.avx-stream");
+    
+    if handle == null {
+        print("[StorageTest] ERRO: storage_open retornou null");
+        return;
+    }
+    
+    print("[StorageTest] Handle obtido: " + str(handle));
+    
+    // Criar pacote de teste
+    let pacote = {
+        "timestamp": 1700000000000000,
+        "lat": -9.6658,
+        "lon": -35.7350,
+        "alt": 100.0,
+        "speed": 15.5,
+        "pitch": 0.05,
+        "roll": 0.03,
+        "yaw": 1.57,
+        "battery_voltage": 12.6,
+        "signal_quality": 0.95,
+        "climb": 2.5
+    };
+    
+    let resultado = storage_write(handle, pacote);
+    print("[StorageTest] Escrita retornou: " + str(resultado));
+    
+    storage_close(handle);
+    print("[StorageTest] Arquivo fechado");
+}
+
+func on_telemetry_packet(p) {
+    // Não faz nada no teste
+}
+
+func on_plugin_unload() {
+    print("[StorageTest] Plugin descarregado");
+}

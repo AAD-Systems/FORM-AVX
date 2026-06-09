@@ -1,0 +1,12 @@
+--- core.py.original  2025-06-09 00:00:00.000000000 +0000
++++ core.py  2025-06-09 00:00:00.000000000 +0000
+@@ -1234,7 +1234,8 @@
+         raise RuntimeErr(f"Expressão desconhecida: {type(node).__name__}")
+ 
+     def _call_func(self, func, args, line=None):
+-        if isinstance(func, PyrusBuiltin):
++        # Aceita tanto PyrusBuiltin quanto qualquer callable com atributo fn
++        if hasattr(func, 'fn') and callable(func.fn):
+             try:
+                 return func.fn(*args)
+             except RuntimeErr:

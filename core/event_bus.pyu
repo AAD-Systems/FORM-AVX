@@ -1,0 +1,102 @@
+// core/event_bus.pyu — SINGLETON SIMPLIFICADO
+
+// Variáveis globais do módulo (persistem entre imports)
+let __listeners = [];
+let __listeners_seguros = [];
+let __ultimo_pacote = null;
+let __total_publicados = 0;
+let __ultimo_timestamp = 0;
+let __status_sistema = "OK";
+let __inicializado = false;
+
+// Inicialização única
+if not __inicializado {
+    __inicializado = true;
+    print("[EventBus] Inicializado (singleton)");
+}
+
+func registrar(fn) {
+    __listeners.push(fn);
+    print("[EventBus] Listener registrado. Total: " + str(len(__listeners)));
+}
+
+func registrar_seguro(fn) {
+    __listeners_seguros.push(fn);
+}
+
+func remover(fn) {
+    let idx = index_of(__listeners, fn);
+    if idx >= 0 { remove_at(__listeners, idx); }
+    
+    let idx2 = index_of(__listeners_seguros, fn);
+    if idx2 >= 0 { remove_at(__listeners_seguros, idx2); }
+}
+
+func index_of(arr, val) {
+    for i in range(len(arr)) {
+        if arr[i] == val { return i; }
+    }
+    return -1;
+}
+
+func remove_at(arr, idx) {
+    let new_arr = [];
+    for i in range(len(arr)) {
+        if i != idx { new_arr.push(arr[i]); }
+    }
+    return new_arr;
+}
+
+func publicar(pacote) {
+    __ultimo_pacote = pacote;
+    __ultimo_timestamp = millis();
+    __total_publicados = __total_publicados + 1;
+    
+    if __total_publicados % 50 == 0 {
+        print("[EventBus] " + str(__total_publicados) + " pubs | Listeners: " + str(len(__listeners)));
+    }
+    
+    for fn in __listeners {
+        fn(pacote);
+    }
+    
+    let para_remover = [];
+    for fn in __listeners_seguros {
+        let ok = tentar(fn, pacote);
+        if not ok { 
+            para_remover.push(fn);
+        }
+    }
+    for fn in para_remover {
+        __listeners_seguros = remove_from(__listeners_seguros, fn);
+    }
+}
+
+func remove_from(arr, val) {
+    let result = [];
+    for item in arr {
+        if item != val { result.push(item); }
+    }
+    return result;
+}
+
+func total_publicados() { return __total_publicados; }
+func ultimo_pacote() { return __ultimo_pacote; }
+
+// Monitor de saúde
+func monitorar_saude() {
+    while true {
+        sleep(0.1);
+        if __ultimo_timestamp > 0 {
+            let delta = millis() - __ultimo_timestamp;
+            if delta > 500 and __status_sistema != "AVISO" {
+                __status_sistema = "AVISO";
+                publicar({"tipo": "SYSTEM_WARNING", "codigo": "TELEMETRY_LOST"});
+            }
+            if delta <= 500 and __status_sistema == "AVISO" {
+                __status_sistema = "OK";
+                publicar({"tipo": "SYSTEM_OK"});
+            }
+        }
+    }
+}

@@ -1,0 +1,164 @@
+// ═══════════════════════════════════════════════════════
+// telemetry/mavlink_bridge.pyu
+// Parser MAVLink v1 — conexão UDP e Serial
+//
+// Processa: HEARTBEAT (0), GLOBAL_POSITION_INT (33),
+//           VFR_HUD (74), ATTITUDE (30), SYS_STATUS (1)
+// ═══════════════════════════════════════════════════════
+
+import "../core/event_bus.pyu";
+
+let _rodando          = false;
+let _ultimo_timestamp = 0;
+let _pacotes_recebidos = 0;
+let _pacotes_invalidos = 0;
+
+// Estado acumulado do drone
+// (juntamos dados de várias mensagens num estado único)
+let _estado = {
+    "tipo":             "TELEMETRY",
+    "timestamp":        0,
+    "lat":              0.0,
+    "lon":              0.0,
+    "alt":              0.0,
+    "speed":            0.0,
+    "pitch":            0.0,
+    "roll":             0.0,
+    "yaw":              0.0,
+    "battery_voltage":  0.0,
+    "signal_quality":   1.0,
+    "modo_voo":         "UNKNOWN",
+    "armed":            false,
+    "satellites":       0,
+    "climb":            0.0,
+};
+
+// ── Loop UDP ──────────────────────────────────────────
+
+func iniciar_udp(porta) {
+    udp.listen(porta);
+    _rodando = true;
+    print("[MAVLink] UDP escutando na porta " + str(porta));
+
+    while _rodando {
+        let raw = udp.recv();
+        if raw != null {
+            processar_raw(raw);
+        }
+    }
+}
+
+// ── Loop Serial ───────────────────────────────────────
+
+func iniciar_serial(dispositivo, baud) {
+    serial.begin(baud);
+    _rodando = true;
+    print("[MAVLink] Serial em " + dispositivo + " @ " + str(baud) + " baud");
+
+    while _rodando {
+        let raw = serial.read();
+        if raw != null {
+            processar_raw(raw);
+        }
+    }
+}
+
+// ── Decodificação ─────────────────────────────────────
+
+func processar_raw(raw) {
+    // MAVLink v1: magic byte = 0xFE = 254
+    let magic = mavlink_byte(raw, 0);
+    if magic != 254 {
+        _pacotes_invalidos = _pacotes_invalidos + 1;
+        return;
+    }
+
+    let msgid = mavlink_byte(raw, 5);
+    _pacotes_recebidos = _pacotes_recebidos + 1;
+
+    if msgid == 0  { processar_heartbeat(raw);  }
+    if msgid == 1  { processar_sys_status(raw);  }
+    if msgid == 30 { processar_attitude(raw);    }
+    if msgid == 33 { processar_gps(raw);         }
+    if msgid == 74 { processar_vfr(raw);         }
+
+    // Publica estado consolidado a cada mensagem de posição/vfr
+    if msgid == 33 or msgid == 74 {
+        _estado["timestamp"] = timestamp_us();
+        publicar(_estado);
+        _ultimo_timestamp = millis();
+    }
+}
+
+func processar_heartbeat(raw) {
+    // Byte 9 = base_mode, se bit 7 set = ARMED
+    let base_mode = mavlink_byte(raw, 6);
+    let armed     = (base_mode / 128) >= 1;
+    _estado["armed"] = armed;
+
+    // custom_mode @ offset 6 (uint32 LE) indica o modo de voo
+    // Simplificamos para ARMED/DISARMED por enquanto
+    if armed {
+        _estado["modo_voo"] = "ARMED";
+    } else {
+        _estado["modo_voo"] = "DISARMED";
+    }
+}
+
+func processar_sys_status(raw) {
+    // battery_remaining @ offset 32 (int8, porcentagem)
+    // voltage_battery @ offset 14 (uint16 mV)
+    let voltage_mv = mavlink_uint16(raw, 20);
+    let voltage_v  = voltage_mv / 1000.0;
+    if voltage_v > 0.0 {
+        _estado["battery_voltage"] = voltage_v;
+    }
+}
+
+func processar_attitude(raw) {
+    // MAVLink ATTITUDE payload (offset 6):
+    // time_boot_ms: uint32 @ 6
+    // roll:         float32 @ 10
+    // pitch:        float32 @ 14
+    // yaw:          float32 @ 18
+    _estado["roll"]  = mavlink_float32(raw, 10);
+    _estado["pitch"] = mavlink_float32(raw, 14);
+    _estado["yaw"]   = mavlink_float32(raw, 18);
+}
+
+func processar_gps(raw) {
+    // GLOBAL_POSITION_INT payload (offset 6):
+    // time_boot_ms: uint32 @ 6
+    // lat:          int32  @ 10  (1e-7 graus)
+    // lon:          int32  @ 14  (1e-7 graus)
+    // alt:          int32  @ 18  (mm acima MSL)
+    // relative_alt: int32  @ 22  (mm acima home)
+    let lat_raw = mavlink_int32(raw, 10);
+    let lon_raw = mavlink_int32(raw, 14);
+    let alt_raw = mavlink_int32(raw, 22);  // relative alt em mm
+
+    _estado["lat"] = lat_raw / 10000000.0;
+    _estado["lon"] = lon_raw / 10000000.0;
+    _estado["alt"] = alt_raw / 1000.0;
+}
+
+func processar_vfr(raw) {
+    // VFR_HUD payload (offset 6):
+    // airspeed:   float32 @ 6
+    // groundspeed:float32 @ 10
+    // alt:        float32 @ 14
+    // climb:      float32 @ 18
+    _estado["speed"] = mavlink_float32(raw, 10);
+    _estado["climb"] = mavlink_float32(raw, 18);
+}
+
+// ── Controle ──────────────────────────────────────────
+
+func parar() {
+    _rodando = false;
+}
+
+func estatisticas() {
+    print("[MAVLink] Recebidos: "  + str(_pacotes_recebidos));
+    print("[MAVLink] Inválidos: "  + str(_pacotes_invalidos));
+}

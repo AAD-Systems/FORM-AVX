@@ -1,0 +1,58 @@
+// core/storage.pyu — COM DEBUG COMPLETO
+
+let _handle      = null;
+let _caminho     = "";
+let _gravados    = 0;
+let _iniciado    = false;
+
+func iniciar() {
+    print("[Storage] iniciar() chamado");
+    _caminho  = gerar_nome_log();
+    print("[Storage] Caminho: " + _caminho);
+    _handle   = storage_open(_caminho);
+    print("[Storage] Handle: " + str(_handle));
+    _iniciado = true;
+    _gravados = 0;
+    print("[Storage] Log iniciado → " + _caminho);
+}
+
+func gravar_telemetria(pacote) {
+    if not _iniciado { 
+        print("[Storage DEBUG] ignorado: nao iniciado");
+        return; 
+    }
+    if _handle == null { 
+        print("[Storage DEBUG] ignorado: handle null");
+        return; 
+    }
+    
+    if not pacote.has("lat") { 
+        print("[Storage DEBUG] ignorado: sem lat");
+        return; 
+    }
+    
+    print("[Storage DEBUG] gravando pacote #" + str(_gravados + 1));
+    let ok = storage_write(_handle, pacote);
+    print("[Storage DEBUG] storage_write retornou: " + str(ok));
+    
+    if ok {
+        _gravados = _gravados + 1;
+        if _gravados % 5 == 0 {
+            print("[Storage] ✅ " + str(_gravados) + " registros gravados.");
+        }
+    } else {
+        print("[Storage DEBUG] ❌ storage_write falhou!");
+    }
+}
+
+func fechar() {
+    if not _iniciado { return; }
+    storage_close(_handle);
+    _handle   = null;
+    _iniciado = false;
+    print("[Storage] Log fechado. Total: " + str(_gravados) + " registros.");
+    print("[Storage] Arquivo: " + _caminho);
+}
+
+func caminho() { return _caminho; }
+func total_gravados() { return _gravados; }
