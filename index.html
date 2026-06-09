@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>FORM AVX · Ground Control Station para drones</title>
-    <meta name="description" content="Ground Control Station para drones. Feita em Pyrus. Roda no Termux. Leve, rápida e open-source.">
-    <meta name="keywords" content="drone, ground control station, mavlink, pyrus, termux, open source">
-    <meta name="author" content="Security Labor">
+    <title>FORM AVX · Ground Control Station</title>
+    <meta name="description" content="Ground Control Station para drones. Leve, open-source, roda no Termux. MAVLink, HUD, mapa e logs binários.">
+    <meta name="author" content="AAD-Systems">
     <meta name="theme-color" content="#0a0d12">
     
-    <!-- Open Graph / Social -->
+    <!-- Open Graph -->
     <meta property="og:title" content="FORM AVX · GCS para drones">
     <meta property="og:description" content="Ground Control Station para drones. Feita em Pyrus. Roda no Termux.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://security-labor.github.io/form-avx">
+    <meta property="og:url" content="https://aad-systems.github.io/FORM-AVX">
+    <meta property="og:image" content="https://aad-systems.github.io/FORM-AVX/logo.png">
     
-    <!-- Favicon (emoji fallback) -->
+    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍐%3C/text%3E%3C/svg%3E">
     
     <style>
@@ -33,37 +33,16 @@
             --text: #e2e8f0;
             --text-dim: #64748b;
             --accent: #7c3aed;
-            --accent-glow: #8b5cf6;
             --accent2: #06b6d4;
             --green: #10b981;
             --amber: #f59e0b;
-            --red: #ef4444;
-            --terminal-bg: #0a0d12;
         }
 
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: system-ui, -apple-system, 'Segoe UI', 'Noto Sans', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             line-height: 1.5;
-            scroll-behavior: smooth;
-        }
-
-        /* Typography */
-        h1, h2, h3 {
-            font-weight: 600;
-            letter-spacing: -0.02em;
-        }
-
-        h1 {
-            font-size: clamp(2.5rem, 8vw, 4rem);
-            line-height: 1.2;
-        }
-
-        h2 {
-            font-size: clamp(1.75rem, 5vw, 2.25rem);
-            margin-bottom: 1.5rem;
-            text-align: center;
         }
 
         .container {
@@ -77,11 +56,24 @@
             border-bottom: 1px solid var(--border);
         }
 
-        section:last-of-type {
+        section:last-child {
             border-bottom: none;
         }
 
-        /* Header / Hero */
+        h1 {
+            font-size: clamp(2.5rem, 8vw, 4rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: clamp(1.75rem, 5vw, 2.25rem);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
         .hero {
             min-height: 85vh;
             display: flex;
@@ -105,19 +97,16 @@
         .hero-demo {
             flex: 1;
             min-width: 320px;
-            background: var(--bg2);
-            border-radius: 1rem;
-            border: 1px solid var(--border);
-            overflow: hidden;
-            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5);
         }
 
         .badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             background: var(--accent);
             color: white;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 600;
             padding: 0.25rem 0.75rem;
             border-radius: 2rem;
             margin-bottom: 1rem;
@@ -145,20 +134,19 @@
             border-radius: 0.5rem;
             font-weight: 600;
             text-decoration: none;
-            transition: all 0.2s ease;
-            font-size: 0.95rem;
+            transition: all 0.2s;
+            font-size: 0.9rem;
         }
 
         .btn-primary {
             background: var(--accent);
             color: white;
-            border: 1px solid var(--accent-glow);
+            border: 1px solid rgba(139, 92, 246, 0.5);
         }
 
         .btn-primary:hover {
             background: #6d28d9;
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px -8px rgba(124,58,237,0.4);
         }
 
         .btn-secondary {
@@ -172,12 +160,13 @@
             border-color: var(--accent);
         }
 
-        /* Terminal simulation */
         .terminal {
-            background: var(--terminal-bg);
+            background: #0a0c10;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
             padding: 1.25rem;
-            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-            font-size: 0.8rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
         }
 
         .terminal-header {
@@ -190,42 +179,24 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #ff5f56;
         }
+        .terminal-dot:nth-child(1) { background: #ff5f56; }
         .terminal-dot:nth-child(2) { background: #ffbd2e; }
         .terminal-dot:nth-child(3) { background: #27c93f; }
 
         .terminal-line {
             color: var(--green);
             white-space: pre-wrap;
-            word-break: break-all;
-            font-family: inherit;
         }
 
         .terminal-prompt {
             color: var(--accent2);
         }
 
-        .cursor {
-            display: inline-block;
-            width: 8px;
-            height: 14px;
-            background: var(--green);
-            vertical-align: middle;
-            animation: blink 1s step-end infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
-        /* Cards grid */
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
-            margin-top: 2rem;
         }
 
         .card {
@@ -243,61 +214,26 @@
 
         .card-icon {
             font-size: 2rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .card h3 {
             margin-bottom: 0.5rem;
+            font-size: 1.1rem;
         }
 
         .card p {
             color: var(--text-dim);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
-        /* Demo screenshot area */
-        .demo-img {
-            background: var(--bg3);
-            border-radius: 0.75rem;
-            text-align: center;
-            padding: 2rem;
-            border: 1px solid var(--border);
-        }
-
-        .demo-placeholder {
-            background: linear-gradient(135deg, #1a1f2e 0%, #0f111a 100%);
-            border-radius: 8px;
-            padding: 2rem;
-            font-family: monospace;
-        }
-
-        .hud-mock {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .horizon {
-            height: 80px;
-            background: linear-gradient(to bottom, #0a2040 50%, #2d1a00 50%);
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-        .horizon-line {
-            position: absolute;
-            top: 50%;
-            width: 100%;
-            height: 2px;
-            background: var(--green);
-        }
-
-        /* Tabs de código */
         .code-tabs {
             background: var(--bg2);
             border-radius: 1rem;
             border: 1px solid var(--border);
             overflow: hidden;
         }
+
         .tabs-header {
             display: flex;
             gap: 0.25rem;
@@ -305,6 +241,7 @@
             padding: 0.5rem 1rem 0;
             border-bottom: 1px solid var(--border);
         }
+
         .tab-btn {
             background: none;
             border: none;
@@ -315,11 +252,13 @@
             border-radius: 6px 6px 0 0;
             transition: all 0.1s;
         }
+
         .tab-btn.active {
             background: var(--bg2);
             color: var(--accent2);
             border-bottom: 2px solid var(--accent2);
         }
+
         .tab-content {
             display: none;
             padding: 1.5rem;
@@ -328,25 +267,27 @@
             overflow-x: auto;
             background: #0a0c10;
         }
+
         .tab-content.active {
             display: block;
         }
-        pre {
+
+        .tab-content pre {
             margin: 0;
             white-space: pre-wrap;
-            word-break: break-word;
         }
-        code {
+
+        .tab-content code {
             color: var(--green);
         }
 
-        /* Install commands */
         .install-box {
             background: var(--bg2);
             border-radius: 1rem;
             padding: 1.5rem;
             border: 1px solid var(--border);
         }
+
         .cmd {
             background: var(--bg);
             padding: 0.75rem 1rem;
@@ -359,9 +300,11 @@
             gap: 1rem;
             margin-bottom: 1rem;
         }
+
         .cmd code {
             color: var(--amber);
         }
+
         .copy-btn {
             background: var(--bg3);
             border: 1px solid var(--border);
@@ -371,65 +314,74 @@
             cursor: pointer;
             font-size: 0.7rem;
         }
+
         .copy-btn:hover {
             background: var(--accent);
             color: white;
         }
 
-        /* Architecture SVG placeholder */
         .arch-diagram {
             background: var(--bg2);
             border-radius: 1rem;
             padding: 2rem;
             text-align: center;
-            font-family: monospace;
             border: 1px solid var(--border);
         }
+
         .arch-flow {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 1rem;
+            gap: 0.5rem;
             align-items: center;
         }
+
         .arch-node {
             background: var(--bg3);
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             border-left: 3px solid var(--accent);
+            font-size: 0.85rem;
         }
 
-        /* Roadmap table */
         .roadmap-table {
             width: 100%;
             border-collapse: collapse;
+            background: var(--bg2);
+            border-radius: 1rem;
+            overflow: hidden;
         }
+
         .roadmap-table th, .roadmap-table td {
             padding: 1rem;
             text-align: left;
             border-bottom: 1px solid var(--border);
         }
+
         .roadmap-table th {
             color: var(--accent2);
+            background: var(--bg3);
         }
+
         .status {
             display: inline-block;
             padding: 0.2rem 0.6rem;
             border-radius: 2rem;
-            font-size: 0.75rem;
-            font-weight: 500;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
+
         .status-dev { background: var(--amber); color: #1a1a00; }
         .status-plan { background: var(--text-dim); color: #000; }
         .status-meta { background: var(--accent); color: white; }
 
-        /* Footer */
         footer {
             padding: 3rem 0;
             text-align: center;
             color: var(--text-dim);
             border-top: 1px solid var(--border);
         }
+
         .footer-links {
             display: flex;
             justify-content: center;
@@ -437,42 +389,36 @@
             flex-wrap: wrap;
             margin-top: 1rem;
         }
+
         .footer-links a {
             color: var(--text-dim);
             text-decoration: none;
         }
+
         .footer-links a:hover {
             color: var(--accent2);
         }
 
         @media (max-width: 768px) {
-            section {
-                padding: 3rem 0;
-            }
-            .hero-grid {
-                flex-direction: column;
-            }
-            .btn-group {
-                justify-content: center;
-            }
+            section { padding: 3rem 0; }
+            .hero-grid { flex-direction: column; }
         }
     </style>
 </head>
 <body>
 
 <main class="container">
-    <!-- Hero Section -->
     <section class="hero">
         <div class="hero-grid">
             <div class="hero-content">
                 <span class="badge">🍐 ALPHA v0.1</span>
                 <h1>FORM AVX<br>Ground Control Station</h1>
                 <div class="tagline">
-                    Ground Control Station para drones. Feita em Pyrus. Roda no seu Termux.
+                    GCS para drones. Leve, open-source. Roda no Termux.
                 </div>
                 <div class="btn-group">
-                    <a href="https://github.com/Security-Labor/form-avx" class="btn btn-primary">⭐ Star no GitHub</a>
-                    <a href="https://github.com/Security-Labor/form-avx" class="btn btn-secondary">📦 Clone</a>
+                    <a href="https://github.com/AAD-Systems/FORM-AVX" class="btn btn-primary">⭐ GitHub</a>
+                    <a href="https://github.com/AAD-Systems/FORM-AVX" class="btn btn-secondary">📦 Clone</a>
                 </div>
             </div>
             <div class="hero-demo">
@@ -493,120 +439,115 @@
         </div>
     </section>
 
-    <!-- O que faz — 6 cards -->
     <section>
-        <h2>⚡ O que faz</h2>
+        <h2>⚡ Funcionalidades</h2>
         <div class="cards-grid">
-            <div class="card"><div class="card-icon">📡</div><h3>MAVLink</h3><p>Telemetria UDP/Serial em tempo real</p></div>
-            <div class="card"><div class="card-icon">🗂️</div><h3>Logs binários</h3><p>Formato .avx-stream, 64 bytes/registro</p></div>
+            <div class="card"><div class="card-icon">📡</div><h3>MAVLink</h3><p>UDP/Serial em tempo real</p></div>
+            <div class="card"><div class="card-icon">🗂️</div><h3>Logs binários</h3><p>.avx-stream, 64 bytes/registro</p></div>
             <div class="card"><div class="card-icon">🎮</div><h3>HUD</h3><p>Horizonte artificial, altitude, heading</p></div>
-            <div class="card"><div class="card-icon">🗺️</div><h3>Mapa tático</h3><p>OpenStreetMap + trilha de voo</p></div>
-            <div class="card"><div class="card-icon">⏪</div><h3>Replay</h3><p>Reprodução de voos gravados</p></div>
-            <div class="card"><div class="card-icon">🧩</div><h3>Plugins</h3><p>Estenda com .pyu sem tocar no core</p></div>
+            <div class="card"><div class="card-icon">🗺️</div><h3>Mapa tático</h3><p>Trilha de voo + OSM</p></div>
+            <div class="card"><div class="card-icon">⏪</div><h3>Replay</h3><p>Reprodução de voos</p></div>
+            <div class="card"><div class="card-icon">🧩</div><h3>Plugins</h3><p>Extensível via .pyu</p></div>
         </div>
     </section>
 
-    <!-- Demo visual (HUD) -->
     <section>
-        <h2>🎮 Demo visual</h2>
-        <div class="demo-img">
-            <div class="demo-placeholder">
-                <div class="hud-mock">
-                    <div class="horizon"><div class="horizon-line"></div></div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
-                        <span>📊 ALT: 50m</span>
-                        <span>🧭 HDG: 142°</span>
-                        <span>⚡ SPD: 12.4 m/s</span>
-                    </div>
+        <h2>🎮 Demo</h2>
+        <div class="arch-diagram">
+            <div class="hud-mock" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="height: 80px; background: linear-gradient(to bottom, #0a2040 50%, #2d1a00 50%); border-radius: 8px; position: relative;">
+                    <div style="position: absolute; top: 50%; width: 100%; height: 2px; background: #10b981;"></div>
                 </div>
-                <p style="margin-top: 1rem; color: var(--text-dim);">Horizonte artificial | Drone em voo circular — Maceió-AL 🍐</p>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>📊 ALT: 50m</span>
+                    <span>🧭 HDG: 142°</span>
+                    <span>⚡ SPD: 12.4 m/s</span>
+                </div>
             </div>
+            <p style="margin-top: 1.5rem; color: var(--text-dim);">Horizonte artificial — Drone em voo circular sobre Maceió-AL 🍐</p>
         </div>
     </section>
 
-    <!-- Código: abas interativas -->
     <section>
         <h2>📄 Código</h2>
         <div class="code-tabs">
             <div class="tabs-header">
                 <button class="tab-btn active" data-tab="tab1">🚀 Simulador</button>
-                <button class="tab-btn" data-tab="tab2">🔌 Plugin (15 linhas)</button>
-                <button class="tab-btn" data-tab="tab3">⚙️ PID em .pyu</button>
+                <button class="tab-btn" data-tab="tab2">🔌 Plugin</button>
+                <button class="tab-btn" data-tab="tab3">⚙️ PID</button>
             </div>
             <div id="tab1" class="tab-content active">
-                <pre><code># Simulador embutido<br>python avx.py --mode sim --headless<br><br># Output esperado:<br>[Sim] Drone voando em círculo<br>[Core] Eventos: 187 | Gravados: 183</code></pre>
+                <pre><code>python avx.py --mode sim --headless
+
+# Saída:
+[Sim] Drone voando em círculo
+[Core] Eventos: 187 | Gravados: 183</code></pre>
             </div>
             <div id="tab2" class="tab-content">
-                <pre><code>// plugins/monitor.pyu<br>func on_telemetry_packet(p) {<br>    if p["alt"] > 80.0 {<br>        print("⚠️ Altitude alta!");<br>    }<br>}</code></pre>
+                <pre><code>// plugins/monitor.pyu
+func on_telemetry_packet(p) {
+    if p["alt"] > 80.0 {
+        print("⚠️ Altitude alta!");
+    }
+}</code></pre>
             </div>
             <div id="tab3" class="tab-content">
-                <pre><code>// altitude_hold.p yu<br>let erro = alt_desejada - altitude;<br>let saida = kp * erro;<br>motor.set(saida);</code></pre>
+                <pre><code>let erro = alt_desejada - altitude;
+let saida = kp * erro;
+motor.set(saida);</code></pre>
             </div>
         </div>
     </section>
 
-    <!-- Instalação -->
     <section>
         <h2>📦 Instalação</h2>
         <div class="install-box">
-            <div class="cmd"><code>git clone https://github.com/Security-Labor/form-avx</code><button class="copy-btn" data-cmd="git clone https://github.com/Security-Labor/form-avx">Copiar</button></div>
-            <div class="cmd"><code>cd form-avx</code><button class="copy-btn" data-cmd="cd form-avx">Copiar</button></div>
+            <div class="cmd"><code>git clone https://github.com/AAD-Systems/FORM-AVX</code><button class="copy-btn" data-cmd="git clone https://github.com/AAD-Systems/FORM-AVX">Copiar</button></div>
+            <div class="cmd"><code>cd FORM-AVX</code><button class="copy-btn" data-cmd="cd FORM-AVX">Copiar</button></div>
             <div class="cmd"><code>python avx.py --mode sim --headless</code><button class="copy-btn" data-cmd="python avx.py --mode sim --headless">Copiar</button></div>
         </div>
-        <p style="margin-top: 1rem; text-align: center; color: var(--text-dim);">✅ Python 3.8+ apenas. Zero dependências para o core.</p>
+        <p style="margin-top: 1rem; text-align: center; color: var(--text-dim);">✅ Python 3.8+ · Zero dependências para o Core</p>
     </section>
 
-    <!-- Arquitetura diagrama -->
     <section>
         <h2>🏗️ Arquitetura</h2>
         <div class="arch-diagram">
             <div class="arch-flow">
-                <div class="arch-node">Drone 🚁</div>
-                <span>→</span>
-                <div class="arch-node">MAVLink</div>
-                <span>→</span>
-                <div class="arch-node">Core Pyrus</div>
-                <span>→</span>
-                <div class="arch-node">Event Bus</div>
-                <span>→</span>
-                <div class="arch-node">Storage + UI</div>
+                <span class="arch-node">Drone</span> <span>→</span>
+                <span class="arch-node">MAVLink</span> <span>→</span>
+                <span class="arch-node">Core Pyrus</span> <span>→</span>
+                <span class="arch-node">Event Bus</span> <span>→</span>
+                <span class="arch-node">Storage + UI</span>
             </div>
-            <p style="margin-top: 1.5rem;">Fluxo único: telemetria → parser → barramento → log + interface</p>
         </div>
     </section>
 
-    <!-- Roadmap -->
     <section>
         <h2>🗺️ Roadmap</h2>
         <table class="roadmap-table">
-            <thead><tr><th>Versão</th><th>O que vem</th><th>Status</th></tr></thead>
+            <thead><tr><th>Versão</th><th>Features</th><th>Status</th></tr></thead>
             <tbody>
-                <tr><td>v0.1</td><td>Core MAVLink, storage, HUD, mapa, replay</td><td><span class="status status-dev">🔨 Em desenvolvimento</span></td></tr>
-                <tr><td>v0.2</td><td>Planejador de missão, controles de replay na UI</td><td><span class="status status-plan">📋 Planejado</span></td></tr>
-                <tr><td>v0.3</td><td>Sistema de plugins estável com API</td><td><span class="status status-plan">📋 Planejado</span></td></tr>
-                <tr><td>v1.0</td><td>Core compilado nativamente via Pyrus v0.6+</td><td><span class="status status-meta">🎯 Meta</span></td></tr>
+                <tr><td>v0.1</td><td>MAVLink, storage, HUD, mapa, replay</td><td><span class="status status-dev">Em desenvolvimento</span></td></tr>
+                <tr><td>v0.2</td><td>Planejador de missão, controles de replay</td><td><span class="status status-plan">Planejado</span></td></tr>
+                <tr><td>v0.3</td><td>Sistema de plugins estável</td><td><span class="status status-plan">Planejado</span></td></tr>
+                <tr><td>v1.0</td><td>Core compilado nativo</td><td><span class="status status-meta">Meta</span></td></tr>
             </tbody>
         </table>
     </section>
 </main>
 
 <footer>
-    <p>🍐 <strong>FORM AVX</strong> — MIT License</p>
+    <p>🍐 <strong>FORM AVX</strong> · MIT License</p>
     <div class="footer-links">
-        <a href="https://github.com/Security-Labor/form-avx">GitHub</a>
-        <a href="https://github.com/Security-Labor/pyrus">Pyrus Lang</a>
-        <span>🇧🇷 Feito em Alagoas, Brasil</span>
+        <a href="https://github.com/AAD-Systems/FORM-AVX">GitHub</a>
+        <a href="https://github.com/AAD-Systems/pyrus">Pyrus Lang</a>
+        <span>🇧🇷 Alagoas, Brasil</span>
     </div>
 </footer>
 
 <script>
-    // Animated terminal (simula inicialização)
-    const messages = [
-        "[Sim] Drone virtual iniciado",
-        "[Core] MAVLink Bridge ativada",
-        "[Storage] Logging ativo",
-        "✅ Pronto para decolar"
-    ];
+    // Terminal animado
+    const messages = ["[Sim] Drone virtual iniciado", "[Core] MAVLink Bridge ativada", "[Storage] Logging ativo", "✅ Pronto para decolar"];
     let idx = 0, charIdx = 0;
     const typingEl = document.getElementById("typing-text");
     function typeNext() {
@@ -626,9 +567,8 @@
     }
     typeNext();
 
-    // Tabs de código
-    const tabs = document.querySelectorAll('.tab-btn');
-    tabs.forEach(btn => {
+    // Abas
+    document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.getAttribute('data-tab');
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -638,15 +578,14 @@
         });
     });
 
-    // Copy buttons
-    const copyBtns = document.querySelectorAll('.copy-btn');
-    copyBtns.forEach(btn => {
+    // Copiar
+    document.querySelectorAll('.copy-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const cmd = btn.getAttribute('data-cmd');
             navigator.clipboard.writeText(cmd);
-            const originalText = btn.textContent;
+            const original = btn.textContent;
             btn.textContent = '✓ Copiado!';
-            setTimeout(() => { btn.textContent = originalText; }, 1500);
+            setTimeout(() => { btn.textContent = original; }, 1500);
         });
     });
 </script>
